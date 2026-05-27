@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This guide covers the plugin itself
 
 ### Prerequisites
 
-- [Codex](https://code.claude.com/) installed
+- [Codex CLI](https://developers.openai.com/codex/cli/install) installed
 - [MCP Toolbox for Databases](https://github.com/googleapis/mcp-toolbox) v1.0.0+ (`brew install mcp-toolbox`)
 - Python 3 (for hook scripts — no external dependencies)
 - A running CockroachDB instance (local or cloud)
@@ -32,13 +32,14 @@ export COCKROACHDB_SSLMODE=disable
 Test the plugin locally:
 
 ```bash
-claude --plugin-dir .
+codex plugin marketplace add file://$(pwd)
+codex plugin install cockroachdb
 ```
 
-Validate the plugin manifest:
+Validate that the marketplace install layout is correct:
 
 ```bash
-claude plugin validate .
+REPO_URL="file://$(pwd)" ./scripts/validate-marketplace-install.sh HEAD
 ```
 
 ## Project Structure
@@ -49,7 +50,6 @@ claude plugin validate .
   marketplace.json         # Marketplace catalog entry
 .mcp.json                  # MCP server definitions (stdio, HTTP, Cloud)
 tools.yaml                 # MCP Toolbox source and tool definitions
-agents/                    # Agent markdown files (auto-discovered)
 hooks/
   hooks.json               # Hook triggers and matchers
 scripts/
@@ -64,7 +64,6 @@ submodules/
 
 | Area | Examples |
 |------|----------|
-| **Agents** | New agent personas, improved prompts, better tool references |
 | **Hooks** | New safety checks, additional SQL anti-pattern detection |
 | **MCP config** | New backend integrations, connection improvements |
 | **Tools** | New tool definitions in `tools.yaml` |
@@ -75,7 +74,7 @@ submodules/
 
 - **New skills** → [cockroachdb-skills](https://github.com/cockroachlabs/cockroachdb-skills) repo
 - **Toolbox bugs** → [MCP Toolbox](https://github.com/googleapis/mcp-toolbox) repo
-- **Codex bugs** → [Codex](https://github.com/anthropics/claude-code) repo
+- **Codex CLI bugs** → [openai/codex](https://github.com/openai/codex) repo
 
 ## Development Workflow
 
@@ -86,7 +85,7 @@ submodules/
 
 2. **Make your changes** — match the existing code style and conventions.
 
-3. **Test locally** — run the plugin with `claude --plugin-dir .` and verify your change works.
+3. **Test locally** — install the plugin from the local path: `codex plugin marketplace add file://$(pwd) && codex plugin install cockroachdb`. Verify your change works.
 
 4. **Test hook scripts** (if modified):
    ```bash
@@ -99,7 +98,7 @@ submodules/
 
 5. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/):
    ```bash
-   git commit -m "fix: quote CODEX_PLUGIN_ROOT for paths with spaces"
+   git commit -m "fix: quote PLUGIN_ROOT for paths with spaces"
    git commit -m "feat: add new hook to validate index definitions"
    git commit -m "docs: clarify Cloud MCP setup in README"
    ```
@@ -123,21 +122,14 @@ This repo uses [Release Please](https://github.com/googleapis/release-please) fo
 
 ## Guidelines
 
-### Agents
-
-- Agent files live in `agents/` and are auto-discovered by Codex.
-- Use markdown format with clear role descriptions.
-- Reference MCP tools by their full names (e.g., `cockroachdb-execute-sql`, `list_clusters`).
-- Do not add restrictive `tools:` frontmatter — agents need access to all MCP tools.
-
 ### Hooks
 
 - Hook scripts must be Python 3 with **no external dependencies** (stdlib only).
 - Read JSON from stdin, write JSON to stdout.
 - Exit code 0 = allow/continue; exit code 2 = block the tool call.
-- Always quote `${CODEX_PLUGIN_ROOT}` in `hooks.json` commands to handle paths with spaces:
+- Always quote `${PLUGIN_ROOT}` in `hooks.json` commands to handle paths with spaces:
   ```json
-  "command": "python3 \"${CODEX_PLUGIN_ROOT}/scripts/your-script.py\""
+  "command": "python3 \"${PLUGIN_ROOT}/scripts/your-script.py\""
   ```
 
 ### MCP Configuration
