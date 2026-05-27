@@ -14,7 +14,7 @@ sources:
     queryTimeoutSec: 30
     queryParams:
       sslmode: ${COCKROACHDB_SSLMODE:require}
-      application_name: cockroachdb-claude-plugin
+      application_name: cockroachdb-codex-plugin
 
 tools:
   cockroachdb-execute-sql:
