@@ -4,7 +4,10 @@
   "plugins": [
     {
       "name": "cockroachdb",
-      "source": "./",
+      "source": {
+        "source": "local",
+        "path": "./plugins/cockroachdb"
+      },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"

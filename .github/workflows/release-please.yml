@@ -25,14 +25,8 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         run: |
           tar -czvf cockroachdb-codex-plugin.tar.gz \
-            .codex-plugin/plugin.json \
             .agents/plugins/marketplace.json \
-            .mcp.json \
-            tools.yaml \
-            skills/ \
-            hooks/ \
-            scripts/ \
-            assets/ \
+            plugins/cockroachdb/ \
             README.md \
             CHANGELOG.md \
             LICENSE

@@ -7,7 +7,7 @@
       "extra-files": [
         {
           "type": "json",
-          "path": ".codex-plugin/plugin.json",
+          "path": "plugins/cockroachdb/.codex-plugin/plugin.json",
           "jsonpath": "$.version"
         }
       ]

@@ -55,18 +55,19 @@ test_sha() {
   echo "      Checked out ${sha}"
   echo ""
 
-  # Step 2: Check if skills/ is a symlink or real directory
-  echo "[2/5] Checking skills/ type..."
-  if [[ -L "${clone_dir}/skills" ]]; then
+  # Step 2: Check if plugins/cockroachdb/skills/ is a symlink or real directory
+  local skills_dir="${clone_dir}/plugins/cockroachdb/skills"
+  echo "[2/5] Checking plugins/cockroachdb/skills/ type..."
+  if [[ -L "${skills_dir}" ]]; then
     local target
-    target=$(readlink "${clone_dir}/skills")
+    target=$(readlink "${skills_dir}")
     echo "      skills/ is a SYMLINK -> ${target}"
-    if [[ -d "${clone_dir}/skills" ]]; then
+    if [[ -d "${skills_dir}" ]]; then
       echo "      Symlink target EXISTS"
     else
       echo "      Symlink target BROKEN (does not exist)"
     fi
-  elif [[ -d "${clone_dir}/skills" ]]; then
+  elif [[ -d "${skills_dir}" ]]; then
     echo "      skills/ is a REAL DIRECTORY"
   else
     echo "      skills/ DOES NOT EXIST"
@@ -95,7 +96,7 @@ test_sha() {
   local broken_count=0
   local symlink_count=0
 
-  if [[ -d "${clone_dir}/skills" ]]; then
+  if [[ -d "${skills_dir}" ]]; then
     while IFS= read -r skill_md; do
       local skill_name
       skill_name=$(basename "$(dirname "${skill_md}")")
@@ -114,33 +115,34 @@ test_sha() {
         echo "      [OK]      ${skill_name}/SKILL.md (${size} bytes)"
       fi
       skill_count=$((skill_count + 1))
-    done < <(find "${clone_dir}/skills" -name "SKILL.md" 2>/dev/null | sort)
+    done < <(find "${skills_dir}" -name "SKILL.md" 2>/dev/null | sort)
   fi
 
   # Also check for directories without SKILL.md
-  if [[ -d "${clone_dir}/skills" ]]; then
+  if [[ -d "${skills_dir}" ]]; then
     while IFS= read -r dir; do
       local name
       name=$(basename "${dir}")
       if [[ ! -f "${dir}/SKILL.md" ]]; then
         echo "      [MISSING] ${name}/ (no SKILL.md)"
       fi
-    done < <(find "${clone_dir}/skills" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
+    done < <(find "${skills_dir}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort)
   fi
   echo ""
 
   # Step 5: Verify other plugin components
+  local plugin_root="${clone_dir}/plugins/cockroachdb"
   echo "[5/5] Checking other components..."
-  echo "      hooks.json:  $(test -f "${clone_dir}/hooks/hooks.json" && echo "YES" || echo "NO")"
-  echo "      .mcp.json:   $(test -f "${clone_dir}/.mcp.json" && echo "YES" || echo "NO")"
-  echo "      tools.yaml:  $(test -f "${clone_dir}/tools.yaml" && echo "YES" || echo "NO")"
-  echo "      plugin.json: $(test -f "${clone_dir}/.codex-plugin/plugin.json" && echo "YES" || echo "NO")"
+  echo "      hooks.json:       $(test -f "${plugin_root}/hooks/hooks.json" && echo "YES" || echo "NO")"
+  echo "      .mcp.json:        $(test -f "${plugin_root}/.mcp.json" && echo "YES" || echo "NO")"
+  echo "      tools.yaml:       $(test -f "${plugin_root}/tools.yaml" && echo "YES" || echo "NO")"
+  echo "      plugin.json:      $(test -f "${plugin_root}/.codex-plugin/plugin.json" && echo "YES" || echo "NO")"
   echo "      marketplace.json: $(test -f "${clone_dir}/.agents/plugins/marketplace.json" && echo "YES" || echo "NO")"
 
-  if [[ -f "${clone_dir}/.codex-plugin/plugin.json" ]]; then
+  if [[ -f "${plugin_root}/.codex-plugin/plugin.json" ]]; then
     local version
-    version=$(python3 -c "import json; print(json.load(open('${clone_dir}/.codex-plugin/plugin.json'))['version'])" 2>/dev/null || echo "unknown")
-    echo "      Version:     ${version}"
+    version=$(python3 -c "import json; print(json.load(open('${plugin_root}/.codex-plugin/plugin.json'))['version'])" 2>/dev/null || echo "unknown")
+    echo "      Version:          ${version}"
   fi
   echo ""
 

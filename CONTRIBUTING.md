@@ -1,6 +1,6 @@
 # Contributing to CockroachDB Plugin for Codex
 
-Thank you for your interest in contributing! This guide covers the plugin itself — agents, hooks, MCP configuration, and tooling. For contributing **skills**, see the [cockroachdb-skills CONTRIBUTING.md](https://github.com/cockroachlabs/cockroachdb-skills/blob/main/CONTRIBUTING.md) instead; skills are maintained upstream and synced here automatically.
+Thank you for your interest in contributing! This guide covers the plugin itself — hooks, MCP configuration, and tooling. For contributing **skills**, see the [cockroachdb-skills CONTRIBUTING.md](https://github.com/cockroachlabs/cockroachdb-skills/blob/main/CONTRIBUTING.md) instead; skills are maintained upstream and synced here automatically.
 
 ## Getting Started
 
@@ -32,8 +32,8 @@ export COCKROACHDB_SSLMODE=disable
 Test the plugin locally:
 
 ```bash
-codex plugin marketplace add file://$(pwd)
-codex plugin install cockroachdb
+codex plugin marketplace add "$(pwd)"
+codex plugin add cockroachdb@cockroachdb-codex-plugin
 ```
 
 Validate that the marketplace install layout is correct:
@@ -45,17 +45,25 @@ REPO_URL="file://$(pwd)" ./scripts/validate-marketplace-install.sh HEAD
 ## Project Structure
 
 ```
-.codex-plugin/
-  plugin.json              # Plugin manifest (version managed by Release Please)
-  marketplace.json         # Marketplace catalog entry
-.mcp.json                  # MCP server definitions (stdio, HTTP, Cloud)
-tools.yaml                 # MCP Toolbox source and tool definitions
-hooks/
-  hooks.json               # Hook triggers and matchers
-scripts/
-  validate-sql.py          # PreToolUse: blocks dangerous SQL patterns
-  check-sql-files.py       # PostToolUse: lints files for anti-patterns
-skills/                    # Copied from cockroachdb-skills submodule (do not edit directly)
+.agents/plugins/
+  marketplace.json         # Codex marketplace catalog entry
+plugins/cockroachdb/       # Plugin payload (the directory Codex installs)
+  .codex-plugin/
+    plugin.json            # Plugin manifest (version managed by Release Please)
+  .mcp.json                # MCP server definitions (stdio, HTTP, Cloud)
+  tools.yaml               # MCP Toolbox source and tool definitions
+  hooks/
+    hooks.json             # Hook triggers and matchers
+  scripts/
+    validate-sql.py        # PreToolUse: blocks dangerous SQL patterns
+    check-sql-files.py     # PostToolUse: lints files for anti-patterns
+    setup-cockroachdb.sh   # Local 3-node cluster + Toolbox bootstrap
+  assets/
+    logo.svg               # Brand mark
+  skills/                  # Synced from cockroachdb-skills submodule (do not edit directly)
+scripts/                   # Repo-level tooling (not shipped with the plugin)
+  sync-skills.sh           # Refresh plugins/cockroachdb/skills/ from submodule
+  validate-marketplace-install.sh
 submodules/
   cockroachdb-skills/      # Upstream skills submodule
 ```
@@ -85,15 +93,15 @@ submodules/
 
 2. **Make your changes** — match the existing code style and conventions.
 
-3. **Test locally** — install the plugin from the local path: `codex plugin marketplace add file://$(pwd) && codex plugin install cockroachdb`. Verify your change works.
+3. **Test locally** — install the plugin from the local path: `codex plugin marketplace add "$(pwd)" && codex plugin add cockroachdb@cockroachdb-codex-plugin`. Verify your change works.
 
 4. **Test hook scripts** (if modified):
    ```bash
    # validate-sql.py — expects JSON on stdin
-   echo '{"tool_input":{"sql":"SELECT 1"}}' | python3 scripts/validate-sql.py
+   echo '{"tool_input":{"sql":"SELECT 1"}}' | python3 plugins/cockroachdb/scripts/validate-sql.py
 
    # check-sql-files.py — expects JSON on stdin
-   echo '{"tool_input":{"file_path":"test.sql"}}' | python3 scripts/check-sql-files.py
+   echo '{"tool_input":{"file_path":"test.sql"}}' | python3 plugins/cockroachdb/scripts/check-sql-files.py
    ```
 
 5. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/):
@@ -140,7 +148,7 @@ This repo uses [Release Please](https://github.com/googleapis/release-please) fo
 
 ### Skills
 
-Skills are synced from the upstream [cockroachdb-skills](https://github.com/cockroachlabs/cockroachdb-skills) submodule by a [weekly CI workflow](.github/workflows/update-skills.yml). Do not edit files in `skills/` directly — changes will be overwritten. Contribute new skills to the upstream repo instead.
+Skills are synced from the upstream [cockroachdb-skills](https://github.com/cockroachlabs/cockroachdb-skills) submodule into `plugins/cockroachdb/skills/` by a [weekly CI workflow](.github/workflows/update-skills.yml). Do not edit files in `plugins/cockroachdb/skills/` directly — changes will be overwritten. Contribute new skills to the upstream repo instead.
 
 ## Reporting Issues
 

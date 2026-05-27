@@ -21,14 +21,16 @@ Official CockroachDB plugin for [OpenAI Codex CLI](https://developers.openai.com
 
 - [Codex CLI](https://developers.openai.com/codex/cli/install) installed.
 - [MCP Toolbox](https://mcp-toolbox.dev/install/) installed (for the default backend): `brew install googleapis/tap/mcp-toolbox`.
-- Access to a CockroachDB cluster, or run `./scripts/setup-cockroachdb.sh` to spin up a local single-node cluster.
+- Access to a CockroachDB cluster, or run `plugins/cockroachdb/scripts/setup-cockroachdb.sh` to spin up a local single-node cluster.
 
 ### Add the marketplace and install
 
 ```bash
 codex plugin marketplace add cockroachdb/codex-plugin
-codex plugin install cockroachdb
+codex plugin add cockroachdb@cockroachdb-codex-plugin
 ```
+
+The marketplace source accepts `owner/repo`, an HTTPS Git URL, an SSH Git URL, or a local path. After `codex plugin marketplace add`, the marketplace is registered as `cockroachdb-codex-plugin` (the `name` field from `.agents/plugins/marketplace.json`).
 
 ### Trust the safety hooks
 
@@ -37,7 +39,7 @@ Codex does not auto-trust plugin-bundled hooks. On first run, Codex will prompt 
 - The PreToolUse hook on `mcp__cockroachdb-toolbox__cockroachdb-execute-sql`.
 - The PostToolUse hook on `Write|Edit|MultiEdit`.
 
-Both run small Python scripts in `scripts/` — review and approve to enable the safety checks.
+Both run small Python scripts in `plugins/cockroachdb/scripts/` — review and approve to enable the safety checks.
 
 ### Configure environment variables
 
@@ -84,7 +86,7 @@ Enable/disable per-backend via Codex's MCP toggle UI.
 
 **Hooks didn't run** — check Codex's hook trust review screen (`codex plugin trust cockroachdb`).
 
-**Skills not appearing** — verify `./skills/` contains `SKILL.md` files: `find skills -name SKILL.md | wc -l`.
+**Skills not appearing** — verify the installed plugin cache contains skills: `find ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/*/skills -name SKILL.md | wc -l` (expect 33).
 
 ## Contributing
 
