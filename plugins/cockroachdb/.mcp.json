@@ -2,7 +2,7 @@
   "mcpServers": {
     "cockroachdb-toolbox": {
       "command": "toolbox",
-      "args": ["--config", "${PLUGIN_ROOT}/tools.yaml", "--stdio"],
+      "args": ["--config", "./tools.yaml", "--stdio"],
       "env": {
         "COCKROACHDB_HOST": "${COCKROACHDB_HOST}",
         "COCKROACHDB_PORT": "${COCKROACHDB_PORT}",

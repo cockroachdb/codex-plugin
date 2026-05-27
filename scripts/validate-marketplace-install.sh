@@ -133,7 +133,7 @@ test_sha() {
   # Step 5: Verify other plugin components
   local plugin_root="${clone_dir}/plugins/cockroachdb"
   echo "[5/5] Checking other components..."
-  echo "      hooks.json:       $(test -f "${plugin_root}/hooks/hooks.json" && echo "YES" || echo "NO")"
+  echo "      hooks.json:       $(test -f "${plugin_root}/hooks.json" && echo "YES" || echo "NO")"
   echo "      .mcp.json:        $(test -f "${plugin_root}/.mcp.json" && echo "YES" || echo "NO")"
   echo "      tools.yaml:       $(test -f "${plugin_root}/tools.yaml" && echo "YES" || echo "NO")"
   echo "      plugin.json:      $(test -f "${plugin_root}/.codex-plugin/plugin.json" && echo "YES" || echo "NO")"

@@ -88,6 +88,33 @@ Enable/disable per-backend via Codex's MCP toggle UI.
 
 **Skills not appearing** — verify the installed plugin cache contains skills: `find ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/*/skills -name SKILL.md | wc -l` (expect 33).
 
+**`SSL error: certificate verify failed` or `node is running secure mode, SSL connection required`** — your cluster runs in secure mode. Set:
+
+```bash
+export COCKROACHDB_SSLMODE=verify-full   # or 'require' for less strict
+export COCKROACHDB_SSLROOTCERT=/path/to/ca.crt
+export COCKROACHDB_SSLCERT=/path/to/client.<user>.crt
+export COCKROACHDB_SSLKEY=/path/to/client.<user>.key
+```
+
+Then extend `tools.yaml` `queryParams:` block with `sslrootcert: ${COCKROACHDB_SSLROOTCERT}`, `sslcert: ${COCKROACHDB_SSLCERT}`, `sslkey: ${COCKROACHDB_SSLKEY}`.
+
+For a quick local dev cluster, start one in insecure mode: `cockroach start-single-node --insecure --listen-addr=localhost:26257 &` and use `COCKROACHDB_SSLMODE=disable`.
+
+**Toolbox stdio MCP can't find `tools.yaml` or env vars look literal (`${COCKROACHDB_HOST}` instead of `localhost`)** — Codex 0.134.0 does not yet expand `${PLUGIN_ROOT}` in `.mcp.json` args or `${VAR}` in the env block, and does not inherit `COCKROACHDB_*` from your shell into spawned MCP processes. Workaround until upstream support lands: register the toolbox MCP manually with absolute paths and concrete env values:
+
+```bash
+codex mcp add cockroachdb-toolbox \
+  --env COCKROACHDB_HOST=localhost \
+  --env COCKROACHDB_PORT=26257 \
+  --env COCKROACHDB_USER=root \
+  --env COCKROACHDB_DATABASE=defaultdb \
+  --env COCKROACHDB_SSLMODE=disable \
+  -- toolbox --config ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/0.1.0/tools.yaml --stdio
+```
+
+The HTTP backend (`cockroachdb-toolbox-http`) and CockroachDB Cloud backend (`cockroachdb-cloud`) are not affected.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md). Skills are sourced from [`cockroachlabs/cockroachdb-skills`](https://github.com/cockroachlabs/cockroachdb-skills) — open skill PRs there, not in this repo.

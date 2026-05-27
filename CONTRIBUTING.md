@@ -52,8 +52,7 @@ plugins/cockroachdb/       # Plugin payload (the directory Codex installs)
     plugin.json            # Plugin manifest (version managed by Release Please)
   .mcp.json                # MCP server definitions (stdio, HTTP, Cloud)
   tools.yaml               # MCP Toolbox source and tool definitions
-  hooks/
-    hooks.json             # Hook triggers and matchers
+  hooks.json               # Hook triggers and matchers (Codex auto-discovers at plugin root)
   scripts/
     validate-sql.py        # PreToolUse: blocks dangerous SQL patterns
     check-sql-files.py     # PostToolUse: lints files for anti-patterns
@@ -135,9 +134,10 @@ This repo uses [Release Please](https://github.com/googleapis/release-please) fo
 - Hook scripts must be Python 3 with **no external dependencies** (stdlib only).
 - Read JSON from stdin, write JSON to stdout.
 - Exit code 0 = allow/continue; exit code 2 = block the tool call.
-- Always quote `${PLUGIN_ROOT}` in `hooks.json` commands to handle paths with spaces:
+- Place `hooks.json` at the plugin root (`plugins/cockroachdb/hooks.json`). Codex discovers it by convention.
+- Use paths relative to the plugin root in hook commands — Codex runs hook commands with the plugin directory as the working directory:
   ```json
-  "command": "python3 \"${PLUGIN_ROOT}/scripts/your-script.py\""
+  "command": "python3 ./scripts/your-script.py"
   ```
 
 ### MCP Configuration
