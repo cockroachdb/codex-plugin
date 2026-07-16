@@ -7,7 +7,7 @@ Thank you for your interest in contributing! This guide covers the plugin itself
 ### Prerequisites
 
 - [Codex CLI](https://developers.openai.com/codex/cli/install) installed
-- [MCP Toolbox for Databases](https://github.com/googleapis/mcp-toolbox) v1.0.0+ (`brew install mcp-toolbox`)
+- [MCP Toolbox for Databases](https://mcp-toolbox.dev/documentation/introduction/#install-toolbox) v1.0.0+ (Homebrew, binary download, or container)
 - Python 3 (for hook scripts — no external dependencies)
 - A running CockroachDB instance (local or cloud)
 

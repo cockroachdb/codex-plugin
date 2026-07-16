@@ -1,15 +1,15 @@
 # CockroachDB Codex Plugin
 
-Official CockroachDB plugin for [OpenAI Codex CLI](https://developers.openai.com/codex/). Connect Codex directly to your CockroachDB clusters — explore schemas, write optimized SQL, debug queries, and manage distributed database clusters.
+CockroachDB plugin for [OpenAI Codex CLI](https://developers.openai.com/codex/). Connect Codex directly to your CockroachDB clusters — explore schemas, write optimized SQL, debug queries, and manage distributed database clusters. Ships an MCP Toolbox backend for any cluster (self-hosted, local, or Cloud) plus the managed CockroachDB Cloud MCP, skills across multiple operational domains, and built-in safety hooks.
 
 > Using **Claude Code** instead? See [cockroachdb/claude-plugin](https://github.com/cockroachdb/claude-plugin).
 
 ## What's inside
 
 - **3 MCP backends:**
-  - `cockroachdb-toolbox` (stdio, default) — self-hosted [MCP Toolbox](https://mcp-toolbox.dev/integrations/cockroachdb/source/) for any cluster (self-hosted, local dev, or Cloud).
+  - `cockroachdb-cloud` (HTTP) — managed CockroachDB Cloud MCP for Cloud clusters. Zero local install.
+  - `cockroachdb-toolbox` (stdio) — self-hosted [MCP Toolbox](https://mcp-toolbox.dev/integrations/cockroachdb/source/) for any cluster (local dev, self-hosted, or Cloud). Codex spawns the Toolbox process.
   - `cockroachdb-toolbox-http` (SSE) — remote/multi-user Toolbox over HTTP.
-  - `cockroachdb-cloud` (HTTP) — managed CockroachDB Cloud MCP for Cloud clusters.
 - **Skills** sourced from [`cockroachlabs/cockroachdb-skills`](https://github.com/cockroachlabs/cockroachdb-skills) — covers query/schema design, observability, security, migrations (MOLT), and cluster lifecycle.
 - **Safety hooks** (ship as `hooks.json` + `scripts/`; activation depends on Codex runtime — see Known Limitations):
   - `validate-sql.py` (PreToolUse) — blocks `DROP DATABASE`/`TRUNCATE`, warns on `SERIAL`/multi-DDL.
@@ -20,7 +20,7 @@ Official CockroachDB plugin for [OpenAI Codex CLI](https://developers.openai.com
 ### Prerequisites
 
 - [Codex CLI](https://developers.openai.com/codex/cli/install) installed.
-- [MCP Toolbox](https://mcp-toolbox.dev/install/) installed (for the default backend): `brew install googleapis/tap/mcp-toolbox`.
+- [MCP Toolbox](https://mcp-toolbox.dev/documentation/introduction/#install-toolbox) installed (only needed for the Toolbox backends; supports Homebrew, binary download, or container).
 - Access to a CockroachDB cluster, or run `plugins/cockroachdb/scripts/setup-cockroachdb.sh` to spin up a local single-node cluster.
 
 ### Add the marketplace and install
@@ -43,6 +43,12 @@ Both run small Python scripts in `plugins/cockroachdb/scripts/` — review and a
 
 ### Configure environment variables
 
+For the `cockroachdb-cloud` backend:
+
+```bash
+export COCKROACHDB_CLUSTER_ID=<your-cloud-cluster-id>
+```
+
 For the `cockroachdb-toolbox` (stdio) backend:
 
 ```bash
@@ -52,12 +58,6 @@ export COCKROACHDB_USER=root
 export COCKROACHDB_PASSWORD=
 export COCKROACHDB_DATABASE=defaultdb
 export COCKROACHDB_SSLMODE=disable   # local dev only; use 'require' or 'verify-full' otherwise
-```
-
-For the `cockroachdb-cloud` backend:
-
-```bash
-export COCKROACHDB_CLUSTER_ID=<your-cloud-cluster-id>
 ```
 
 ## Usage
@@ -74,19 +74,19 @@ The plugin's skills will be auto-loaded by Codex based on task context.
 
 | Backend | Transport | Use case |
 |---|---|---|
-| `cockroachdb-toolbox` | stdio | Default. Works against any cluster. Read-only by default; enable writes via `tools.yaml`. |
+| `cockroachdb-cloud` | HTTP | Managed CockroachDB Cloud MCP. Requires `COCKROACHDB_CLUSTER_ID`. Zero local install. |
+| `cockroachdb-toolbox` | stdio | Self-hosted Toolbox against any cluster (local dev, self-hosted, or Cloud). Codex spawns the process. Read-only by default; enable writes via `tools.yaml`. |
 | `cockroachdb-toolbox-http` | HTTP/SSE | Remote/multi-user Toolbox deployments. Run `toolbox --config tools.yaml` separately. |
-| `cockroachdb-cloud` | HTTP | Managed CockroachDB Cloud MCP. Requires `COCKROACHDB_CLUSTER_ID`. |
 
 Enable/disable per-backend via Codex's MCP toggle UI.
 
 ## Troubleshooting
 
-**`toolbox: command not found`** — install MCP Toolbox: `brew install googleapis/tap/mcp-toolbox`.
+**`toolbox: command not found`** — install [MCP Toolbox](https://mcp-toolbox.dev/documentation/introduction/#install-toolbox) (Homebrew, binary download, or container image).
 
 **Hooks didn't run** — check Codex's hook trust review screen (`codex plugin trust cockroachdb`).
 
-**Skills not appearing** — verify the installed plugin cache contains skills: `find ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/*/skills -name SKILL.md | wc -l` (expect 33).
+**Skills not appearing** — verify the installed plugin cache contains skills: `find ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/*/skills -name SKILL.md | wc -l`.
 
 **`SSL error: certificate verify failed` or `node is running secure mode, SSL connection required`** — your cluster runs in secure mode. Set:
 
@@ -125,6 +125,7 @@ codex mcp add cockroachdb-toolbox \
 ## Contributing
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md). Skills are sourced from [`cockroachlabs/cockroachdb-skills`](https://github.com/cockroachlabs/cockroachdb-skills) — open skill PRs there, not in this repo.
+
 
 ## License
 
