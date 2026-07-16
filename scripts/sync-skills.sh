@@ -18,7 +18,9 @@ fi
 git -C "$REPO_ROOT/submodules/cockroachdb-skills" submodule update --init --recursive
 
 mkdir -p "$DST"
-rsync -a --delete --exclude='.git' --exclude='.github' "$SRC/" "$DST/"
+# -L copies symlink targets as regular files: upstream uses symlinks for
+# shared reference files, which break on Windows clones (core.symlinks=false).
+rsync -aL --delete --exclude='.git' --exclude='.github' "$SRC/" "$DST/"
 
 SUBMODULE_SHA=$(git -C "$REPO_ROOT/submodules/cockroachdb-skills" rev-parse --short HEAD)
 SKILL_COUNT=$(find "$DST" -name 'SKILL.md' -type f | wc -l | tr -d ' ')
