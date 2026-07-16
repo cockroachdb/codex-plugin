@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Post-edit check for CockroachDB anti-patterns in SQL and code files.
-Receives JSON on stdin from Claude Code PostToolUse hook.
+Receives JSON on stdin from a PostToolUse hook.
+
+The advisory message is emitted under both ``systemMessage`` (VS Code Copilot /
+Claude Code, user-visible) and ``additionalContext`` (GitHub Copilot CLI,
+model-visible), so the lint surfaces regardless of which tool runs the hook.
 """
 
 import json
@@ -18,8 +22,22 @@ def main():
     except (json.JSONDecodeError, EOFError):
         sys.exit(0)
 
-    tool_input = data.get("tool_input", {})
-    file_path = tool_input.get("file_path", "")
+    # tool_input/toolInput (VS Code / Claude) or toolArgs (Copilot CLI). File
+    # path key varies by tool: file_path (Claude), filePath / path (others).
+    tool_input = (
+        data.get("tool_input")
+        or data.get("toolInput")
+        or data.get("toolArgs")
+        or {}
+    )
+    if not isinstance(tool_input, dict):
+        sys.exit(0)
+    file_path = (
+        tool_input.get("file_path")
+        or tool_input.get("filePath")
+        or tool_input.get("path")
+        or ""
+    )
     if not file_path:
         sys.exit(0)
 
@@ -40,13 +58,13 @@ def main():
 
     if re.search(r"\b(SERIAL|BIGSERIAL)\b", content, re.IGNORECASE):
         warnings.append(
-            "SERIAL/BIGSERIAL detected — causes write hotspots in CockroachDB, "
+            "SERIAL/BIGSERIAL detected: causes write hotspots in CockroachDB, "
             "use UUID with gen_random_uuid() instead."
         )
 
     if re.search(r"SELECT\s+\*\s+FROM", content, re.IGNORECASE):
         warnings.append(
-            "SELECT * detected — enumerate columns explicitly for CockroachDB "
+            "SELECT * detected: enumerate columns explicitly for CockroachDB "
             "to enable covering index optimizations."
         )
 
@@ -55,7 +73,7 @@ def main():
         if re.search(r"\bBEGIN\b|sql\.Tx", content):
             if not re.search(r"crdb\.ExecuteTx|retry|40001", content, re.IGNORECASE):
                 warnings.append(
-                    "Transaction without retry logic detected — CockroachDB requires "
+                    "Transaction without retry logic detected: CockroachDB requires "
                     "retry on SQLSTATE 40001 (serialization_failure). "
                     "Use crdb.ExecuteTx from cockroach-go."
                 )
@@ -65,14 +83,16 @@ def main():
         if re.search(r"\bBEGIN\b|connection\.setAutoCommit", content):
             if not re.search(r"retry|40001|RetryableExecutor", content, re.IGNORECASE):
                 warnings.append(
-                    "Transaction without retry logic detected — CockroachDB requires "
+                    "Transaction without retry logic detected: CockroachDB requires "
                     "retry on SQLSTATE 40001. "
                     "Use cockroachdb-jdbc-wrapper RetryableExecutor."
                 )
 
     if warnings:
+        message = "CockroachDB lint: " + " ".join(warnings)
         json.dump({
-            "systemMessage": "CockroachDB lint: " + " ".join(warnings)
+            "systemMessage": message,
+            "additionalContext": message,
         }, sys.stdout)
 
     sys.exit(0)
