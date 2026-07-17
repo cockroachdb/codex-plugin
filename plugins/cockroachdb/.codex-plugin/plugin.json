@@ -1,19 +1,35 @@
 {
   "name": "cockroachdb",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Connect Codex directly to your CockroachDB clusters — explore schemas, write optimized SQL, debug queries, and manage distributed database clusters. Ships an MCP Toolbox backend for any cluster (self-hosted, local, or Cloud) plus the managed CockroachDB Cloud MCP, skills across multiple operational domains, and built-in safety hooks.",
-  "author": { "name": "Cockroach Labs", "url": "https://github.com/cockroachdb" },
+  "author": {
+    "name": "Cockroach Labs",
+    "url": "https://github.com/cockroachdb"
+  },
   "homepage": "https://github.com/cockroachdb/codex-plugin",
   "repository": "https://github.com/cockroachdb/codex-plugin",
   "license": "Apache-2.0",
-  "keywords": ["cockroachdb", "database", "sql", "distributed-sql", "postgres-compatible", "mcp", "schema", "migration", "multi-region"],
+  "keywords": [
+    "cockroachdb",
+    "database",
+    "sql",
+    "distributed-sql",
+    "postgres-compatible",
+    "mcp",
+    "schema",
+    "migration",
+    "multi-region"
+  ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "CockroachDB",
     "shortDescription": "Hands-on CockroachDB work from Codex.",
     "category": "Database",
-    "capabilities": ["Read", "Write"],
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
     "websiteURL": "https://www.cockroachlabs.com",
     "logo": "./assets/logo.svg",
     "brandColor": "#6933FF"
