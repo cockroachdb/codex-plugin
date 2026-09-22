@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/cockroachdb/codex-plugin/compare/v0.1.1...v0.1.2) (2026-09-22)
+
+
+### Bug Fixes
+
+* resolve packaged MCP resources from plugin root ([#3](https://github.com/cockroachdb/codex-plugin/issues/3)) ([bfc6ca3](https://github.com/cockroachdb/codex-plugin/commit/bfc6ca3d02590fce10965e9fd3952fe3d17b71c0))
+
 ## [0.1.1](https://github.com/cockroachdb/codex-plugin/compare/v0.1.0...v0.1.1) (2026-07-17)
 
 
