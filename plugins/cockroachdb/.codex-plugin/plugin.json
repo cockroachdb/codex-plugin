@@ -1,6 +1,6 @@
 {
   "name": "cockroachdb",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Connect Codex directly to your CockroachDB clusters — explore schemas, write optimized SQL, debug queries, and manage distributed database clusters. Ships an MCP Toolbox backend for any cluster (self-hosted, local, or Cloud) plus the managed CockroachDB Cloud MCP, skills across multiple operational domains, and built-in safety hooks.",
   "author": {
     "name": "Cockroach Labs",
