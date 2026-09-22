@@ -39,6 +39,7 @@ codex plugin add cockroachdb@cockroachdb-codex-plugin
 Validate that the marketplace install layout is correct:
 
 ```bash
+python3 -m unittest -v tests/test_plugin_package.py
 REPO_URL="file://$(pwd)" ./scripts/validate-marketplace-install.sh HEAD
 ```
 
@@ -143,7 +144,8 @@ This repo uses [Release Please](https://github.com/googleapis/release-please) fo
 ### MCP Configuration
 
 - `.mcp.json` defines MCP server backends.
-- Use `${ENV_VAR}` syntax for environment variable references.
+- Use `env_vars` to forward variables to stdio servers and
+  `env_http_headers` to source HTTP header values from variables.
 - The `tools.yaml` file uses Toolbox v1.1.0 map-based format with `${VAR:default}` syntax for defaults.
 
 ### Skills
