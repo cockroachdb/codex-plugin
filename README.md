@@ -11,7 +11,7 @@ CockroachDB plugin for [OpenAI Codex CLI](https://developers.openai.com/codex/).
   - `cockroachdb-toolbox` (stdio) — self-hosted [MCP Toolbox](https://mcp-toolbox.dev/integrations/cockroachdb/source/) for any cluster (local dev, self-hosted, or Cloud). Codex spawns the Toolbox process.
   - `cockroachdb-toolbox-http` (SSE) — remote/multi-user Toolbox over HTTP.
 - **Skills** sourced from [`cockroachlabs/cockroachdb-skills`](https://github.com/cockroachlabs/cockroachdb-skills) — covers query/schema design, observability, security, migrations (MOLT), and cluster lifecycle.
-- **Safety hooks** (ship as `hooks.json` + `scripts/`; activation depends on Codex runtime — see Known Limitations):
+- **Safety hooks** (ship as `hooks.json` + `scripts/`; activation depends on the Codex runtime version):
   - `validate-sql.py` (PreToolUse) — blocks `DROP DATABASE`/`TRUNCATE`, warns on `SERIAL`/multi-DDL.
   - `check-sql-files.py` (PostToolUse) — lints SQL/Go/Java/Python/Ruby/JS/TS files for CockroachDB anti-patterns.
 
@@ -60,6 +60,10 @@ export COCKROACHDB_DATABASE=defaultdb
 export COCKROACHDB_SSLMODE=disable   # local dev only; use 'require' or 'verify-full' otherwise
 ```
 
+Codex starts this backend from the installed plugin root, loads the bundled
+`./tools.yaml`, and forwards these variables to Toolbox. No manual MCP
+registration or path into the plugin cache is needed.
+
 ## Usage
 
 Once installed, Codex auto-discovers the MCP tools. Try:
@@ -76,9 +80,17 @@ The plugin's skills will be auto-loaded by Codex based on task context.
 |---|---|---|
 | `cockroachdb-cloud` | HTTP | Managed CockroachDB Cloud MCP. Requires `COCKROACHDB_CLUSTER_ID`. Zero local install. |
 | `cockroachdb-toolbox` | stdio | Self-hosted Toolbox against any cluster (local dev, self-hosted, or Cloud). Codex spawns the process. Read-only by default; enable writes via `tools.yaml`. |
-| `cockroachdb-toolbox-http` | HTTP/SSE | Remote/multi-user Toolbox deployments. Run `toolbox --config tools.yaml` separately. |
+| `cockroachdb-toolbox-http` | HTTP/SSE | Remote/multi-user Toolbox deployments. Client-only; start Toolbox separately. |
 
 Enable/disable per-backend via Codex's MCP toggle UI.
+
+The `cockroachdb-toolbox-http` entry only connects to
+`http://127.0.0.1:5000/mcp`; it does not start a server. Before enabling it,
+start Toolbox independently from a directory containing your Toolbox config:
+
+```bash
+toolbox --config tools.yaml
+```
 
 ## Troubleshooting
 
@@ -87,6 +99,12 @@ Enable/disable per-backend via Codex's MCP toggle UI.
 **Hooks didn't run** — check Codex's hook trust review screen (`codex plugin trust cockroachdb`).
 
 **Skills not appearing** — verify the installed plugin cache contains skills: `find ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/*/skills -name SKILL.md | wc -l`.
+
+**Toolbox uses an unexpected config path** — check `codex mcp list` for a
+manually registered `cockroachdb-toolbox` server. A user-level server with the
+same name can shadow the plugin-provided server. The plugin itself uses its
+installed, bundled `tools.yaml`; it does not require an absolute checkout or
+versioned cache path.
 
 **`SSL error: certificate verify failed` or `node is running secure mode, SSL connection required`** — your cluster runs in secure mode. Set:
 
@@ -100,27 +118,6 @@ export COCKROACHDB_SSLKEY=/path/to/client.<user>.key
 Then extend `tools.yaml` `queryParams:` block with `sslrootcert: ${COCKROACHDB_SSLROOTCERT}`, `sslcert: ${COCKROACHDB_SSLCERT}`, `sslkey: ${COCKROACHDB_SSLKEY}`.
 
 For a quick local dev cluster, start one in insecure mode: `cockroach start-single-node --insecure --listen-addr=localhost:26257 &` and use `COCKROACHDB_SSLMODE=disable`.
-
-## Known limitations (Codex 0.134.0)
-
-Two Codex runtime gaps affect this plugin until upstream support lands:
-
-1. **Plugin-bundled MCP servers don't get path/env interpolation.** `${PLUGIN_ROOT}` in `.mcp.json` args is passed through literally, and `${VAR}` references in the `env:` block are not expanded. Codex also doesn't inherit `COCKROACHDB_*` env from your shell into spawned MCP processes. Workaround below.
-2. **Plugin-bundled `hooks.json` doesn't fire.** Both PreToolUse and PostToolUse hooks are recognized at install time but don't execute against tool calls in 0.134.0. The hooks ship for forward-compatibility.
-
-The HTTP backends (`cockroachdb-toolbox-http`, `cockroachdb-cloud`) are not affected by #1.
-
-**Workaround for #1** — register the toolbox MCP manually with absolute paths and concrete env values:
-
-```bash
-codex mcp add cockroachdb-toolbox \
-  --env COCKROACHDB_HOST=localhost \
-  --env COCKROACHDB_PORT=26257 \
-  --env COCKROACHDB_USER=root \
-  --env COCKROACHDB_DATABASE=defaultdb \
-  --env COCKROACHDB_SSLMODE=disable \
-  -- toolbox --config ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/0.1.0/tools.yaml --stdio
-```
 
 ## Contributing
 
