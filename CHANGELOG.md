@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/cockroachdb/codex-plugin/compare/v0.1.2...v0.1.3) (2026-10-09)
+
+
+### Bug Fixes
+
+* make the safety hooks and MCP servers work in Codex ([#5](https://github.com/cockroachdb/codex-plugin/issues/5)) ([836f445](https://github.com/cockroachdb/codex-plugin/commit/836f4454bdbe7104610d675d8e2ef11d1b0c159e))
+
 ## [0.1.2](https://github.com/cockroachdb/codex-plugin/compare/v0.1.1...v0.1.2) (2026-09-22)
 
 
