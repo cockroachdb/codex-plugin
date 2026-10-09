@@ -19,11 +19,6 @@
         "COCKROACHDB_DATABASE",
         "COCKROACHDB_SSLMODE"
       ]
-    },
-    "cockroachdb-toolbox-http": {
-      "type": "http",
-      "url": "http://127.0.0.1:5000/mcp",
-      "_comment": "SSE transport — run 'toolbox --config tools.yaml' first, then connect via this URL"
     }
   }
 }
