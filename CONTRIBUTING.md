@@ -51,9 +51,10 @@ REPO_URL="file://$(pwd)" ./scripts/validate-marketplace-install.sh HEAD
 plugins/cockroachdb/       # Plugin payload (the directory Codex installs)
   .codex-plugin/
     plugin.json            # Plugin manifest (version managed by Release Please)
-  .mcp.json                # MCP server definitions (stdio, HTTP, Cloud)
+  .mcp.json                # MCP server definitions (Toolbox stdio, Cloud)
   tools.yaml               # MCP Toolbox source and tool definitions
-  hooks.json               # Hook triggers and matchers (Codex auto-discovers at plugin root)
+  hooks/
+    hooks.json             # Hook triggers and matchers (Codex's default hooks location)
   scripts/
     validate-sql.py        # PreToolUse: blocks dangerous SQL patterns
     check-sql-files.py     # PostToolUse: lints files for anti-patterns
@@ -134,12 +135,15 @@ This repo uses [Release Please](https://github.com/googleapis/release-please) fo
 
 - Hook scripts must be Python 3 with **no external dependencies** (stdlib only).
 - Read JSON from stdin, write JSON to stdout.
-- Exit code 0 = allow/continue; exit code 2 = block the tool call.
-- Place `hooks.json` at the plugin root (`plugins/cockroachdb/hooks.json`). Codex discovers it by convention.
-- Use paths relative to the plugin root in hook commands — Codex runs hook commands with the plugin directory as the working directory:
+- Always exit 0 and signal a block through JSON. Codex treats exit 2 with stderr text as a block, so a crashing script would block every matched call; the trailing `; exit 0` in each command keeps a missing or crashing script fail-open.
+- Keep hooks in `plugins/cockroachdb/hooks/hooks.json`, where Codex looks by default when the manifest declares no `hooks`.
+- Codex runs hook commands in the session's working directory, not the plugin root, so reference scripts through `${PLUGIN_ROOT}`, which Codex substitutes into the command, and quote it for paths with spaces:
   ```json
-  "command": "python3 ./scripts/your-script.py"
+  "command": "python3 \"${PLUGIN_ROOT}/scripts/your-script.py\" --codex; exit 0"
   ```
+- Pass `--codex` to the scripts. Codex rejects unknown top-level keys in hook output and then ignores the whole output, so the scripts emit only `systemMessage` and `hookSpecificOutput` in that mode.
+- Matchers see Codex's tool names: MCP tools become `mcp__<server>__<tool>` with every character outside `[A-Za-z0-9_]` replaced by `_` (so `mcp__cockroachdb_toolbox__cockroachdb_execute_sql`), and file edits are `apply_patch`, whose input is the patch text in `tool_input.command`.
+- Codex runs plugin hooks only after the user trusts them in `/hooks`, and asks again when a hook definition changes.
 
 ### MCP Configuration
 

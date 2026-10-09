@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__cockroachdb_toolbox__cockroachdb_execute_sql",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/validate-sql.py\" --codex; exit 0",
+            "timeout": 10,
+            "statusMessage": "Checking SQL with the CockroachDB safety hook"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${PLUGIN_ROOT}/scripts/check-sql-files.py\" --codex; exit 0",
+            "timeout": 15,
+            "statusMessage": "Linting edited files for CockroachDB anti-patterns"
+          }
+        ]
+      }
+    ]
+  }
+}

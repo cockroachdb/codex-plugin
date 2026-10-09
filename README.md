@@ -6,12 +6,11 @@ CockroachDB plugin for [OpenAI Codex CLI](https://developers.openai.com/codex/).
 
 ## What's inside
 
-- **3 MCP backends:**
+- **MCP backends:**
   - `cockroachdb-cloud` (HTTP) — managed CockroachDB Cloud MCP for Cloud clusters. Zero local install.
   - `cockroachdb-toolbox` (stdio) — self-hosted [MCP Toolbox](https://mcp-toolbox.dev/integrations/cockroachdb/source/) for any cluster (local dev, self-hosted, or Cloud). Codex spawns the Toolbox process.
-  - `cockroachdb-toolbox-http` (SSE) — remote/multi-user Toolbox over HTTP.
 - **Skills** sourced from [`cockroachlabs/cockroachdb-skills`](https://github.com/cockroachlabs/cockroachdb-skills) — covers query/schema design, observability, security, migrations (MOLT), and cluster lifecycle.
-- **Safety hooks** (ship as `hooks.json` + `scripts/`; activation depends on the Codex runtime version):
+- **Safety hooks** (`hooks/hooks.json` + `scripts/`), which run once you trust them in `/hooks`:
   - `validate-sql.py` (PreToolUse) — blocks `DROP DATABASE`/`TRUNCATE`, warns on `SERIAL`/multi-DDL.
   - `check-sql-files.py` (PostToolUse) — lints SQL/Go/Java/Python/Ruby/JS/TS files for CockroachDB anti-patterns.
 
@@ -20,8 +19,8 @@ CockroachDB plugin for [OpenAI Codex CLI](https://developers.openai.com/codex/).
 ### Prerequisites
 
 - [Codex CLI](https://developers.openai.com/codex/cli/install) installed.
-- [MCP Toolbox](https://mcp-toolbox.dev/documentation/introduction/#install-toolbox) installed (only needed for the Toolbox backends; supports Homebrew, binary download, or container).
-- Access to a CockroachDB cluster, or run `plugins/cockroachdb/scripts/setup-cockroachdb.sh` to spin up a local single-node cluster.
+- [MCP Toolbox](https://mcp-toolbox.dev/documentation/introduction/#install-toolbox) v1.0.0 or later on your `PATH`, for the `cockroachdb-toolbox` backend. Use `brew install mcp-toolbox` on macOS or Linux. On Windows, download `toolbox.exe` into a folder on your `PATH` as described in the [Toolbox install instructions](https://github.com/googleapis/mcp-toolbox#install-toolbox).
+- A running CockroachDB cluster for the `cockroachdb-toolbox` backend, or run `plugins/cockroachdb/scripts/setup-cockroachdb.sh` to spin up a local single-node cluster. Toolbox connects when Codex starts it, so without a reachable cluster the backend fails to start. If you don't run a cluster, [turn the backend off](#turn-off-a-backend-you-dont-use).
 
 ### Add the marketplace and install
 
@@ -34,22 +33,35 @@ The marketplace source accepts `owner/repo`, an HTTPS Git URL, an SSH Git URL, o
 
 ### Trust the safety hooks
 
-Codex does not auto-trust plugin-bundled hooks. On first run, Codex will prompt you to review and approve:
+Codex skips plugin hooks until you review and trust them. Run `/hooks` in a Codex session and trust the two CockroachDB hooks:
 
-- The PreToolUse hook on `mcp__cockroachdb-toolbox__cockroachdb-execute-sql`.
-- The PostToolUse hook on `Write|Edit|MultiEdit`.
+- The PreToolUse hook on `mcp__cockroachdb_toolbox__cockroachdb_execute_sql`, Codex's name for the Toolbox SQL tool.
+- The PostToolUse hook on file edits (`apply_patch`).
 
-Both run small Python scripts in `plugins/cockroachdb/scripts/` — review and approve to enable the safety checks.
+Both run small Python scripts bundled with the plugin. If a plugin update changes a hook, Codex asks you to review it again.
 
 ### Configure environment variables
 
-For the `cockroachdb-cloud` backend:
+All of these are optional. Set them in the environment you start Codex from.
+
+The `cockroachdb-cloud` backend works without configuration and can reach every cluster your CockroachDB Cloud role allows. To limit it to one cluster:
 
 ```bash
 export COCKROACHDB_CLUSTER_ID=<your-cloud-cluster-id>
 ```
 
-For the `cockroachdb-toolbox` (stdio) backend:
+The `cockroachdb-toolbox` (stdio) backend reads the variables below, and Codex forwards only these names to Toolbox. An unset variable falls back to its default in the bundled `tools.yaml`:
+
+| Variable               | Default     | Notes                                                                        |
+|------------------------|-------------|------------------------------------------------------------------------------|
+| `COCKROACHDB_HOST`     | `localhost` |                                                                              |
+| `COCKROACHDB_PORT`     | `26257`     |                                                                              |
+| `COCKROACHDB_USER`     | `root`      |                                                                              |
+| `COCKROACHDB_PASSWORD` | (empty)     |                                                                              |
+| `COCKROACHDB_DATABASE` | `defaultdb` |                                                                              |
+| `COCKROACHDB_SSLMODE`  | `require`   | Use `disable` for a local `--insecure` cluster, `verify-full` for production |
+
+For a local development cluster:
 
 ```bash
 export COCKROACHDB_HOST=localhost
@@ -78,25 +90,58 @@ The plugin's skills will be auto-loaded by Codex based on task context.
 
 | Backend | Transport | Use case |
 |---|---|---|
-| `cockroachdb-cloud` | HTTP | Managed CockroachDB Cloud MCP. Requires `COCKROACHDB_CLUSTER_ID`. Zero local install. |
-| `cockroachdb-toolbox` | stdio | Self-hosted Toolbox against any cluster (local dev, self-hosted, or Cloud). Codex spawns the process. Read-only by default; enable writes via `tools.yaml`. |
-| `cockroachdb-toolbox-http` | HTTP/SSE | Remote/multi-user Toolbox deployments. Client-only; start Toolbox separately. |
+| `cockroachdb-cloud` | HTTP | Managed CockroachDB Cloud MCP. Set `COCKROACHDB_CLUSTER_ID` to limit it to one cluster. Zero local install. |
+| `cockroachdb-toolbox` | stdio | Self-hosted Toolbox against any cluster (local dev, self-hosted, or Cloud). Codex spawns the process. Read-only: writes and schema changes need `enableWriteMode: true` in a Toolbox configuration of your own. |
 
-Enable/disable per-backend via Codex's MCP toggle UI.
+### Turn off a backend you don't use
 
-The `cockroachdb-toolbox-http` entry only connects to
-`http://127.0.0.1:5000/mcp`; it does not start a server. Before enabling it,
-start Toolbox independently from a directory containing your Toolbox config:
+Codex starts both backends in every session. To turn one off, add this to `~/.codex/config.toml`:
+
+```toml
+[plugins."cockroachdb@cockroachdb-codex-plugin".mcp_servers.cockroachdb-toolbox]
+enabled = false
+```
+
+Use `cockroachdb-cloud` in place of `cockroachdb-toolbox` to turn off the Cloud backend. Don't put `enabled = false` under a bare `[mcp_servers.cockroachdb-toolbox]` table instead: Codex rejects a server table without a `command` or `url`, and every `codex` command fails until you remove it.
+
+### Alternative backends
+
+**MCP Toolbox over HTTP.** To use a Toolbox server you run yourself, for example a shared deployment, start it with `toolbox --config tools.yaml`, which listens on `http://127.0.0.1:5000/mcp` by default, and register it:
 
 ```bash
-toolbox --config tools.yaml
+codex mcp add cockroachdb-toolbox-http --url http://127.0.0.1:5000/mcp
 ```
+
+**CockroachDB MCP Server (first-party, self-hosted).** [CockroachDB MCP Server](https://github.com/cockroachdb/cockroachdb-mcp-server) is Cockroach Labs' own MCP server for clusters you run yourself. By default it registers only read-only tools, such as `list_databases`, `list_tables`, `get_table_schema`, `select_query`, `explain_query`, `show_statement`, and `show_running_queries`. Setting `CRDB_MCP_ENABLE_WRITE_QUERIES=true` adds `create_database`, `create_table`, `insert_rows`, `update_rows`, and `delete_rows`, and the server refuses an `UPDATE` or `DELETE` without a `WHERE` clause.
+
+Install it with `go install github.com/cockroachdb/cockroachdb-mcp-server@latest` (Go 1.26+). Linux and Windows binaries and a Docker image are listed on the [releases page](https://github.com/cockroachdb/cockroachdb-mcp-server/releases). There are no prebuilt macOS binaries, so on macOS use `go install` or Docker. For a local `--insecure` development cluster:
+
+```bash
+codex mcp add cockroachdb-mcp-server --env CRDB_DATABASE_URL="postgresql://root@localhost:26257/defaultdb?sslmode=disable" --env CRDB_MCP_ALLOW_INSECURE_DB=true -- cockroachdb-mcp-server
+```
+
+For certificate authentication (recommended), add it to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.cockroachdb-mcp-server]
+command = "cockroachdb-mcp-server"
+
+[mcp_servers.cockroachdb-mcp-server.env]
+CRDB_HOST = "your-cluster-host"
+CRDB_USERNAME = "ai_agent"
+CRDB_SSL_MODE = "verify-full"
+CRDB_SSL_CA_PATH = "/certs/ca.crt"
+CRDB_SSL_CERTFILE = "/certs/client.ai_agent.crt"
+CRDB_SSL_KEYFILE = "/certs/client.ai_agent.key"
+```
+
+Password authentication is off unless you set `CRDB_MCP_ALLOW_PASSWORD_AUTH=true`. The plugin's SQL safety hook applies to the bundled Toolbox backend; this server enforces its own guardrails. See the [server's README](https://github.com/cockroachdb/cockroachdb-mcp-server#configuration) for every setting.
 
 ## Troubleshooting
 
 **`toolbox: command not found`** — install [MCP Toolbox](https://mcp-toolbox.dev/documentation/introduction/#install-toolbox) (Homebrew, binary download, or container image).
 
-**Hooks didn't run** — check Codex's hook trust review screen (`codex plugin trust cockroachdb`).
+**Hooks didn't run**: run `/hooks` in a Codex session and trust the CockroachDB hooks. Codex skips plugin hooks that haven't been trusted, or that changed since you trusted them.
 
 **Skills not appearing** — verify the installed plugin cache contains skills: `find ~/.codex/plugins/cache/cockroachdb-codex-plugin/cockroachdb/*/skills -name SKILL.md | wc -l`.
 
@@ -106,16 +151,7 @@ same name can shadow the plugin-provided server. The plugin itself uses its
 installed, bundled `tools.yaml`; it does not require an absolute checkout or
 versioned cache path.
 
-**`SSL error: certificate verify failed` or `node is running secure mode, SSL connection required`** — your cluster runs in secure mode. Set:
-
-```bash
-export COCKROACHDB_SSLMODE=verify-full   # or 'require' for less strict
-export COCKROACHDB_SSLROOTCERT=/path/to/ca.crt
-export COCKROACHDB_SSLCERT=/path/to/client.<user>.crt
-export COCKROACHDB_SSLKEY=/path/to/client.<user>.key
-```
-
-Then extend `tools.yaml` `queryParams:` block with `sslrootcert: ${COCKROACHDB_SSLROOTCERT}`, `sslcert: ${COCKROACHDB_SSLCERT}`, `sslkey: ${COCKROACHDB_SSLKEY}`.
+**`SSL error: certificate verify failed` or `node is running secure mode, SSL connection required`**: your cluster runs in secure mode, so set `COCKROACHDB_SSLMODE` to `require` or `verify-full`. The bundled `tools.yaml` passes only `sslmode` to the driver, and Codex forwards only the variables listed under [Configure environment variables](#configure-environment-variables). If you need a CA file or client certificates, run Toolbox with your own copy of `tools.yaml` that adds `sslrootcert`, `sslcert`, and `sslkey` under `queryParams`, register it as your own MCP server, and turn off the plugin's `cockroachdb-toolbox` backend.
 
 For a quick local dev cluster, start one in insecure mode: `cockroach start-single-node --insecure --listen-addr=localhost:26257 &` and use `COCKROACHDB_SSLMODE=disable`.
 

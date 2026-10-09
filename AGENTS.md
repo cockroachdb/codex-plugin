@@ -19,21 +19,21 @@ codex plugin add cockroachdb@cockroachdb-codex-plugin
 
 - **Never edit `plugins/cockroachdb/skills/` by hand.** Skills are synced from the [cockroachdb-skills](https://github.com/cockroachlabs/cockroachdb-skills) submodule by `scripts/sync-skills.sh`. The sync uses `rsync -aL` on purpose: upstream uses symlinks for shared reference files, and symlinks break on Windows clones (`core.symlinks=false` checks them out as text files). Keep the `-L`.
 - **Skills keep the upstream domain-grouped layout** (unlike the copilot plugin, which flattens). Cross-skill relative links resolve on disk here, so no link rewriting is needed. If you change the layout, re-verify every `../` link still resolves.
-- **Hook commands use paths relative to the plugin payload** (`python3 ./scripts/...`), matching Codex conventions. The hook scripts emit both output contracts (top-level `permissionDecision`/`additionalContext` plus `hookSpecificOutput`/`systemMessage`) and are shared verbatim with the copilot plugin; if you change one, change both. Note that Codex runtime support for plugin hooks has version-dependent gaps; the scripts must always fail open (exit 0) so a runtime that does run them can never get stuck.
+- **Hooks live in `plugins/cockroachdb/hooks/hooks.json`** (Codex's default location) and their commands are `python3 "${PLUGIN_ROOT}/scripts/<script>.py" --codex; exit 0`. Codex runs hooks in the session's working directory, so a relative `./scripts` path fails, and `; exit 0` keeps a crashing script from blocking every call. Matchers use Codex's sanitized tool names (`mcp__cockroachdb_toolbox__cockroachdb_execute_sql`, `apply_patch`). `--codex` makes the scripts emit only the keys Codex accepts; without it they emit both the Copilot CLI and the VS Code/Claude Code contracts. The scripts are shared verbatim with the copilot plugin; if you change one, change both.
 - **Hook scripts are Python 3 stdlib only**, read JSON on stdin, write JSON on stdout.
 - **Never bump versions by hand.** Release Please owns `version` in `plugins/cockroachdb/.codex-plugin/plugin.json`, `.release-please-manifest.json`, and `CHANGELOG.md`. Conventional commits: `fix:`/`feat:` cut a release, `chore:`/`docs:` do not.
 - **No counts in descriptions.** Counts go stale; name the things instead.
 
 ## Testing
 
-Smoke-test hook scripts from the payload directory, the way `hooks.json` invokes them:
+Smoke-test hook scripts from the payload directory with the flag `hooks/hooks.json` passes:
 
 ```bash
 cd plugins/cockroachdb
-echo '{"tool_input":{"sql":"DROP DATABASE x"}}' | python3 ./scripts/validate-sql.py
+echo '{"tool_input":{"sql":"DROP DATABASE x"}}' | python3 ./scripts/validate-sql.py --codex
 ```
 
-To verify the full install path, add this repo as a marketplace with the Codex CLI (commands above) and confirm the cached payload contains the manifest, `.mcp.json`, `hooks.json`, and the skills tree.
+To verify the full install path, add this repo as a marketplace with the Codex CLI (commands above) and confirm the cached payload contains the manifest, `.mcp.json`, `hooks/hooks.json`, and the skills tree. `python3 -m unittest -v tests/test_plugin_package.py` checks the MCP and hook wiring, including the hook output shape Codex accepts.
 
 ## Writing style
 
